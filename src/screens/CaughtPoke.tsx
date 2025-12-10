@@ -1,33 +1,48 @@
-// Main Pokedex screen:
-// - Fetches first 151 Pokémon
-// - Search, view modes (All/Caught/Missing)
-// - Detail modal with stats
-// - Avatar dropdown (Edit Profile / Log out)
-// - Community button row (navigates to Community screen)
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Image, TouchableOpacity,
-  TextInput, ActivityIndicator, StatusBar, Dimensions, Modal,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
   ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
-import { useNavigation } from '@react-navigation/native'; // This part is for navigation.
 import UserAvatar from '../components/UserAvatar';
+
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
-// This part is for defining colors for each Pokémon type.
+// ===== Pokémon type colors =====
 const TYPE_COLORS: { [key: string]: string } = {
-  normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
-  grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
-  ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
-  rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
-  steel: '#B8B8D0', fairy: '#EE99AC',
+  normal: '#A8A878',
+  fire: '#F08030',
+  water: '#6890F0',
+  electric: '#F8D030',
+  grass: '#78C850',
+  ice: '#98D8D8',
+  fighting: '#C03028',
+  poison: '#A040A0',
+  ground: '#E0C068',
+  flying: '#A890F0',
+  psychic: '#F85888',
+  bug: '#A8B820',
+  rock: '#B8A038',
+  ghost: '#705898',
+  dragon: '#7038F8',
+  dark: '#705848',
+  steel: '#B8B8D0',
+  fairy: '#EE99AC',
 };
 
-// This part is for describing the Pokémon object used in the list and details.
+// ===== Local Pokémon type =====
 type Pokemon = {
   id: number;
   name: string;
@@ -40,8 +55,14 @@ type Pokemon = {
   description?: string;
 };
 
-const HomeScreen = () => {
-  // ===== Main Pokedex state =====
+const CaughtPoke = () => {
+  // ===== Auth user =====
+  const user = auth().currentUser;
+
+  // ===== Profile menu state (avatar dropdown) =====
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // ===== Pokedex state =====
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const [filtered, setFiltered] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,79 +70,65 @@ const HomeScreen = () => {
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // ===== Caught / view mode state =====
+  // ===== Caught state (local to this screen) =====
   const [caughtIds, setCaughtIds] = useState<number[]>([]);
-  const [viewMode, setViewMode] = useState<'all' | 'caught' | 'missing'>('all');
 
-  // ===== Profile menu state (avatar dropdown) =====
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Tracks if the dropdown is visible
-
-  // This part is for getting the authenticated user.
-  const user = auth().currentUser;
-
-  // This part is for navigation (to Community and other screens).
-  const navigation = useNavigation<any>();
-
-  // This part is for fetching the initial list of Pokémon.
+  // ===== Fetch base list once =====
   useEffect(() => {
     fetchPokemon();
   }, []);
 
-  // This part is for recomputing the filtered list
-  // whenever search text, view mode, or caught list changes.
+  // ===== Filter ONLY caught Pokémon + search =====
   useEffect(() => {
-    let baseList = pokemon;
+    // Start from only caught Pokémon
+    let baseList = pokemon.filter(p => caughtIds.includes(p.id));
 
-    if (viewMode === 'caught') {
-      baseList = pokemon.filter(p => caughtIds.includes(p.id));
-    } else if (viewMode === 'missing') {
-      baseList = pokemon.filter(p => !caughtIds.includes(p.id));
-    }
-
-    if (search) {
-      setFiltered(
-        baseList.filter(p =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
+    if (search.trim()) {
+      const query = search.toLowerCase();
+      baseList = baseList.filter(
+        p =>
+          p.name.toLowerCase().includes(query) ||
           p.id.toString().includes(search),
-        ),
       );
-    } else {
-      setFiltered(baseList);
     }
-  }, [search, pokemon, viewMode, caughtIds]);
 
-  // This part is for fetching the first 151 Pokémon with basic info.
+    setFiltered(baseList);
+  }, [search, pokemon, caughtIds]);
+
+  // ===== Fetch list of first 151 Pokémon =====
   const fetchPokemon = async () => {
     try {
       const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
       const data = await res.json();
+
       const details: Pokemon[] = await Promise.all(
         data.results.map(async (p: any) => {
           const r = await fetch(p.url);
           const d = await r.json();
+
           return {
             id: d.id,
             name: d.name,
             image:
-              d.sprites.other['official-artwork'].front_default ||
-              d.sprites.front_default,
+              d.sprites?.other?.['official-artwork']?.front_default ||
+              d.sprites?.front_default,
             types: d.types.map((t: any) => t.type.name),
           };
         }),
       );
+
       setPokemon(details);
-      setFiltered(details);
+      setLoading(false);
     } catch (e) {
-      console.error('Error:', e);
-    } finally {
+      console.error('Error fetching Pokémon list:', e);
       setLoading(false);
     }
   };
 
-  // This part is for fetching detailed Pokémon information
-  // such as description, stats, height, and weight.
+  // ===== Fetch full details for modal =====
   const fetchPokemonDetails = async (id: number) => {
     setDetailLoading(true);
+
     try {
       const pokemonRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
       const pokemonData = await pokemonRes.json();
@@ -138,7 +145,9 @@ const HomeScreen = () => {
       const detailedPokemon: Pokemon = {
         id: pokemonData.id,
         name: pokemonData.name,
-        image: pokemonData.sprites.other['official-artwork'].front_default,
+        image:
+          pokemonData.sprites?.other?.['official-artwork']?.front_default ||
+          pokemonData.sprites?.front_default,
         types: pokemonData.types.map((t: any) => t.type.name),
         height: pokemonData.height / 10,
         weight: pokemonData.weight / 10,
@@ -156,36 +165,33 @@ const HomeScreen = () => {
 
       setSelectedPokemon(detailedPokemon);
     } catch (e) {
-      console.error('Error fetching details:', e);
+      console.error('Error fetching Pokémon details:', e);
     } finally {
       setDetailLoading(false);
     }
   };
 
-  // This part is for opening the detail modal for a selected Pokémon.
+  // ===== Handlers =====
   const handlePokemonPress = (poke: Pokemon) => {
     fetchPokemonDetails(poke.id);
   };
 
-  // This part is for logging out the current user.
   const handleLogout = () => {
-    setIsMenuOpen(false);  // Close dropdown before logging out
+    setIsMenuOpen(false);
     auth().signOut();
   };
 
-  // This part is for checking and toggling caught Pokémon.
   const isPokemonCaught = (id: number) => caughtIds.includes(id);
 
   const handleToggleCaught = (poke: Pokemon) => {
-    setCaughtIds(prev => {
-      if (prev.includes(poke.id)) {
-        return prev.filter(id => id !== poke.id);
-      }
-      return [...prev, poke.id];
-    });
+    setCaughtIds(prev =>
+      prev.includes(poke.id)
+        ? prev.filter(pid => pid !== poke.id)
+        : [...prev, poke.id],
+    );
   };
 
-  // This part is for rendering each Pokémon card in the grid.
+  // ===== Render helpers =====
   const renderItem = ({ item }: { item: Pokemon }) => {
     const primaryType = item.types[0];
     const bgColor = TYPE_COLORS[primaryType] || '#A8A878';
@@ -243,7 +249,6 @@ const HomeScreen = () => {
     );
   };
 
-  // This part is for rendering individual base stat bars in the detail modal.
   const renderStatBar = (statName: string, value: number) => {
     const maxStat = 255;
     const percentage = (value / maxStat) * 100;
@@ -266,31 +271,28 @@ const HomeScreen = () => {
     );
   };
 
+  // ===== Render =====
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header (greeting, main feature buttons, stats, view toggles, search, profile menu) */}
+      {/* Header with avatar + menu + stats + static tabs + search */}
       <View style={styles.header}>
-        {/* Top row: greeting + avatar */}
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>{user?.displayName || 'Trainer'}</Text>
-          </View>
+        {/* Greeting + avatar */}
+<View style={styles.headerTop}>
+  <View>
+    <Text style={styles.greeting}>Welcome back,</Text>
+    <Text style={styles.userName}>{user?.displayName || 'Trainer'}</Text>
+  </View>
 
-          {/* Avatar button – opens dropdown menu */}
-          <TouchableOpacity
-            style={styles.avatarButton}
-            onPress={() => setIsMenuOpen(prev => !prev)} // Toggle dropdown
-          >
-            <Text style={styles.avatarText}>
-              {(user?.displayName || 'T').charAt(0).toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        </View>
+  <UserAvatar
+    label={(user?.displayName || 'T').charAt(0).toUpperCase()} // user initial
+    onPress={() => setIsMenuOpen(prev => !prev)}               // toggle dropdown
+  />
+</View>
 
-        {/* Profile dropdown menu (Edit Profile / Log out) */}
+
+        {/* Avatar dropdown menu */}
         {isMenuOpen && (
           <View style={styles.profileMenu}>
             <TouchableOpacity
@@ -310,19 +312,7 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* Main feature buttons row (Community, future AR buttons, etc.) */}
-        <View style={styles.featureRow}>
-          <TouchableOpacity
-            style={styles.featureButton}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Community')} // Navigate to Community screen
-          >
-            <Text style={styles.featureButtonText}>Community</Text>
-          </TouchableOpacity>
-          {/* Future: add AR Hunt, AR Capture buttons here with same style */}
-        </View>
-
-        {/* Stats row */}
+        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{caughtIds.length}</Text>
@@ -340,56 +330,21 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        {/* View mode buttons: All / Caught / Missing */}
+        {/* Tabs – visually highlight Caught here (no navigation yet) */}
         <View style={styles.viewToggleRow}>
-          <TouchableOpacity
-            style={[
-              styles.viewToggleButton,
-              viewMode === 'all' && styles.viewToggleButtonActive,
-            ]}
-            onPress={() => setViewMode('all')}
-          >
+          <View style={styles.viewToggleButton}>
+            <Text style={styles.viewToggleText}>All</Text>
+          </View>
+          <View style={[styles.viewToggleButton, styles.viewToggleButtonActive]}>
             <Text
-              style={[
-                styles.viewToggleText,
-                viewMode === 'all' && styles.viewToggleTextActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.viewToggleButton,
-              viewMode === 'caught' && styles.viewToggleButtonActive,
-            ]}
-            onPress={() => setViewMode('caught')}
-          >
-            <Text
-              style={[
-                styles.viewToggleText,
-                viewMode === 'caught' && styles.viewToggleTextActive,
-              ]}
+              style={[styles.viewToggleText, styles.viewToggleTextActive]}
             >
               Caught
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.viewToggleButton,
-              viewMode === 'missing' && styles.viewToggleButtonActive,
-            ]}
-            onPress={() => setViewMode('missing')}
-          >
-            <Text
-              style={[
-                styles.viewToggleText,
-                viewMode === 'missing' && styles.viewToggleTextActive,
-              ]}
-            >
-              Missing
-            </Text>
-          </TouchableOpacity>
+          </View>
+          <View style={styles.viewToggleButton}>
+            <Text style={styles.viewToggleText}>Missing</Text>
+          </View>
         </View>
 
         {/* Search bar */}
@@ -412,7 +367,7 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      {/* Pokémon grid or loading state */}
+      {/* Content: list of caught Pokémon (or empty state) */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#DC0A2D" />
@@ -428,19 +383,21 @@ const HomeScreen = () => {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={styles.emptyText}>No Pokémon found</Text>
-              <Text style={styles.emptySubtext}>Try a different search term</Text>
+              <Text style={styles.emptyIcon}>📭</Text>
+              <Text style={styles.emptyText}>No caught Pokémon yet</Text>
+              <Text style={styles.emptySubtext}>
+                Mark some Pokémon as caught to see them here
+              </Text>
             </View>
           }
         />
       )}
 
-      {/* Pokémon detail modal */}
+      {/* Detail modal */}
       <Modal
         visible={selectedPokemon !== null}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setSelectedPokemon(null)}
       >
         <View style={styles.modalOverlay}>
@@ -452,7 +409,7 @@ const HomeScreen = () => {
               </View>
             ) : selectedPokemon ? (
               <>
-                {/* Modal Header */}
+                {/* Header */}
                 <View
                   style={[
                     styles.modalHeader,
@@ -492,7 +449,7 @@ const HomeScreen = () => {
                   </View>
                 </View>
 
-                {/* Toggle caught status from detail view */}
+                {/* Caught toggle */}
                 <View style={styles.caughtButtonWrapper}>
                   <TouchableOpacity
                     style={[
@@ -516,12 +473,11 @@ const HomeScreen = () => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Modal Body */}
+                {/* Body */}
                 <ScrollView
                   style={styles.modalBody}
                   showsVerticalScrollIndicator={false}
                 >
-                  {/* Description */}
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
                     <Text style={styles.description}>
@@ -529,7 +485,6 @@ const HomeScreen = () => {
                     </Text>
                   </View>
 
-                  {/* Physical Stats */}
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Physical Stats</Text>
                     <View style={styles.physicalStats}>
@@ -549,7 +504,6 @@ const HomeScreen = () => {
                     </View>
                   </View>
 
-                  {/* Abilities */}
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Abilities</Text>
                     <View style={styles.abilitiesContainer}>
@@ -564,7 +518,6 @@ const HomeScreen = () => {
                     </View>
                   </View>
 
-                  {/* Base Stats */}
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Base Stats</Text>
                     {selectedPokemon.stats?.map(stat =>
@@ -581,7 +534,7 @@ const HomeScreen = () => {
   );
 };
 
-// This part is for styling the screen and its components.
+// ===== Styles (same as HomeScreen, reused) =====
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
 
@@ -596,14 +549,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
-    position: 'relative', // Needed for absolute-positioned dropdown
+    position: 'relative',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   greeting: { fontSize: 14, color: '#666', marginBottom: 2 },
   userName: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
@@ -622,10 +575,9 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
 
-  // Dropdown menu under avatar
   profileMenu: {
     position: 'absolute',
-    top: 70, // slightly below headerTop
+    top: 70,
     right: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -648,27 +600,6 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#DC0A2D',
     fontWeight: '600',
-  },
-
-  // Main feature row (Community + future AR buttons)
-  featureRow: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  featureButton: {
-    flex: 1,
-    borderRadius: 20,
-    paddingVertical: 10,
-    backgroundColor: '#FDECEF', // light red background
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#DC0A2D',
   },
 
   statsRow: {
@@ -984,4 +915,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default CaughtPoke;
