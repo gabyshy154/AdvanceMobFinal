@@ -10,6 +10,7 @@ import CaughtPoke from './src/screens/CaughtPoke';
 import MissingPoke from './src/screens/MissingPoke';
 import CommunityScreen from './src/screens/CommunityScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import GroupScreen from './src/screens/GroupScreen'; 
 
 // This defines all screen names for the stack (for TypeScript and navigation).
 export type RootStackParamList = {
@@ -20,6 +21,13 @@ export type RootStackParamList = {
   MissingPoke: undefined;
   Community: undefined;
   EditProfile: undefined;
+
+  // ✅ Group screen gets these params from CommunityScreen
+  Group: {
+    groupId: string;
+    name: string;
+    description: string;
+  };
 };
 
 // Create the native stack navigator using the route list above.
@@ -55,6 +63,8 @@ const App = () => {
             <Stack.Screen name="MissingPoke" component={MissingPoke} />
             <Stack.Screen name="Community" component={CommunityScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            {/* ✅ New Group screen */}
+            <Stack.Screen name="Group" component={GroupScreen} />
           </>
         ) : (
           // When no user is logged in → show auth screens.

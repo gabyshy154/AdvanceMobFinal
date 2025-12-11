@@ -1,9 +1,3 @@
-// This screen is for the Community feature based on groups.
-// - Shows a list of groups in 2 columns
-// - Has a search bar to filter groups
-// - Has a circular "add group" button (UI only for now)
-// - Has a back button to return to Home
-
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -13,10 +7,15 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
 
-// This part is for describing a simple group object.
+// ----- Types -----
 type Group = {
   id: string;
   name: string;
@@ -24,8 +23,10 @@ type Group = {
   members: number;
 };
 
-// This part is for sample static groups (temporary data).
-const SAMPLE_GROUPS: Group[] = [
+type CommunityNav = NativeStackNavigationProp<RootStackParamList, 'Community'>;
+
+// Sample starting groups
+const INITIAL_GROUPS: Group[] = [
   {
     id: '1',
     name: 'Kanto Shiny Hunters',
@@ -53,31 +54,66 @@ const SAMPLE_GROUPS: Group[] = [
 ];
 
 const CommunityScreen = () => {
-  // This part is for navigation (back to Home).
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<CommunityNav>();
 
-  // This part is for managing search text.
+  // Groups state
+  const [groups, setGroups] = useState<Group[]>(INITIAL_GROUPS);
+
+  // Search state
   const [search, setSearch] = useState('');
 
-  // This part is for filtering groups based on search.
+  // Create Group modal state
+  const [isCreateGroupVisible, setIsCreateGroupVisible] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [createGroupError, setCreateGroupError] = useState('');
+
+  // Filter groups by search
   const filteredGroups = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return SAMPLE_GROUPS;
-    return SAMPLE_GROUPS.filter(group =>
+    if (!query) return groups;
+    return groups.filter(group =>
       group.name.toLowerCase().includes(query),
     );
-  }, [search]);
+  }, [search, groups]);
 
-  // This part is for rendering each group card in the grid.
-  const renderItem = ({ item }: { item: Group }) => (
+  const openCreateGroupModal = () => {
+    setCreateGroupError('');
+    setNewGroupName('');
+    setNewGroupDescription('');
+    setIsCreateGroupVisible(true);
+  };
+
+  const handleCreateGroup = () => {
+    if (!newGroupName.trim()) {
+      setCreateGroupError('Group name is required.');
+      return;
+    }
+
+    const newGroup: Group = {
+      id: Date.now().toString(),
+      name: newGroupName.trim(),
+      description: newGroupDescription.trim() || 'No description yet.',
+      members: 1,
+    };
+
+    setGroups(prev => [newGroup, ...prev]);
+    setIsCreateGroupVisible(false);
+  };
+
+  const handleOpenGroup = (group: Group) => {
+    navigation.navigate('Group', {
+      groupId: group.id,
+      name: group.name,
+      description: group.description,
+    });
+  };
+
+  const renderGroupItem = ({ item }: { item: Group }) => (
     <TouchableOpacity
       style={styles.groupCard}
       activeOpacity={0.8}
-      // This part is for future navigation to a Group detail / chat screen.
-      onPress={() => {
-        // TODO: Navigate to GroupChatScreen in the future.
-        console.log('Pressed group:', item.name);
-      }}
+      onPress={() => handleOpenGroup(item)}
     >
       <Text style={styles.groupName} numberOfLines={1}>
         {item.name}
@@ -93,13 +129,12 @@ const CommunityScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* This part is for the top header of the Community screen. */}
+      {/* Header */}
       <View style={styles.header}>
-        {/* Header top row with Back button and title */}
         <View style={styles.headerTopRow}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()} // This part returns to Home.
+            onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
             <Text style={styles.backButtonText}>‹</Text>
@@ -108,13 +143,13 @@ const CommunityScreen = () => {
           <View style={styles.headerTitleBlock}>
             <Text style={styles.headerTitle}>Community</Text>
             <Text style={styles.headerSubtitle}>
-              Join groups and chat with other trainers
+              Create groups and share posts with other trainers
             </Text>
           </View>
         </View>
       </View>
 
-      {/* This part is for the search bar to filter groups by name. */}
+      {/* Search bar */}
       <View style={styles.searchWrapper}>
         <View style={styles.searchContainer}>
           <TextInput
@@ -132,10 +167,10 @@ const CommunityScreen = () => {
         </View>
       </View>
 
-      {/* This part is for the 2-column grid of groups. */}
+      {/* Groups grid */}
       <FlatList
         data={filteredGroups}
-        renderItem={renderItem}
+        renderItem={renderGroupItem}
         keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
@@ -151,22 +186,77 @@ const CommunityScreen = () => {
         }
       />
 
-      {/* This part is for the circular "Add Group" button (UI only for now). */}
+      {/* Add Group FAB */}
       <TouchableOpacity
         style={styles.addButton}
         activeOpacity={0.8}
-        onPress={() => {
-          // TODO: Navigate to CreateGroup screen in the future.
-          console.log('Add Group pressed');
-        }}
+        onPress={openCreateGroupModal}
       >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
+
+      {/* Create Group Modal */}
+      <Modal
+        visible={isCreateGroupVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsCreateGroupVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.createGroupModalContent}>
+            <Text style={styles.modalTitle}>Create New Group</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Group name"
+              placeholderTextColor="#999"
+              value={newGroupName}
+              onChangeText={text => {
+                setNewGroupName(text);
+                setCreateGroupError('');
+              }}
+            />
+
+            <TextInput
+              style={[styles.modalInput, styles.modalTextArea]}
+              placeholder="Description (optional)"
+              placeholderTextColor="#999"
+              value={newGroupDescription}
+              onChangeText={text => {
+                setNewGroupDescription(text);
+                setCreateGroupError('');
+              }}
+              multiline
+            />
+
+            {createGroupError ? (
+              <Text style={styles.modalError}>{createGroupError}</Text>
+            ) : null}
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => setIsCreateGroupVisible(false)}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleCreateGroup}
+              >
+                <Text style={styles.modalButtonPrimaryText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
 
-// This part is for styling the CommunityScreen.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -186,8 +276,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
-  // This part is for the top header row with back button + title block.
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,6 +415,72 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginTop: -2,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  createGroupModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1a1a1a',
+    marginBottom: 10,
+  },
+  modalTextArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  modalError: {
+    color: '#DC0A2D',
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  modalButton: {
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#F1F1F1',
+  },
+  modalButtonSecondaryText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#DC0A2D',
+  },
+  modalButtonPrimaryText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 
