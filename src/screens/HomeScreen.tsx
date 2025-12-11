@@ -295,7 +295,10 @@ const HomeScreen = () => {
           <View style={styles.profileMenu}>
             <TouchableOpacity
               style={styles.profileMenuItem}
-              onPress={() => setIsMenuOpen(false)} // Edit Profile (static for now)
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate("EditProfile");
+              }}
             >
               <Text style={styles.profileMenuItemText}>Edit Profile</Text>
             </TouchableOpacity>
