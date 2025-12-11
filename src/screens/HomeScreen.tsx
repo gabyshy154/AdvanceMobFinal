@@ -1,5 +1,3 @@
-// File: src/screens/HomeScreen.tsx
-// Main Pokedex screen:
 // - Fetches first 151 Pokémon
 // - Search, view modes (All / Caught / Missing)
 // - Detail modal with stats + description
@@ -23,6 +21,7 @@ import {
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
+import UserAvatar from '../components/UserAvatar';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -64,7 +63,7 @@ type Pokemon = {
 
 const HomeScreen = () => {
   // ===== Navigation and user =====
-  const navigation = useNavigation<any>();       // For navigating to Community
+  const navigation = useNavigation<any>();       // For navigating to Community / EditProfile
   const user = auth().currentUser;               // Logged-in Firebase user
 
   // ===== Main Pokédex state =====
@@ -315,14 +314,11 @@ const HomeScreen = () => {
             <Text style={styles.userName}>{user?.displayName || 'Trainer'}</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.avatarButton}
+          {/* Animated Pokéball avatar */}
+          <UserAvatar
+            label={(user?.displayName || 'T').charAt(0).toUpperCase()}
             onPress={() => setIsMenuOpen(prev => !prev)}
-          >
-            <Text style={styles.avatarText}>
-              {(user?.displayName || 'T').charAt(0).toUpperCase()}
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Avatar dropdown */}
@@ -330,7 +326,10 @@ const HomeScreen = () => {
           <View style={styles.profileMenu}>
             <TouchableOpacity
               style={styles.profileMenuItem}
-              onPress={() => setIsMenuOpen(false)} // Edit Profile (static)
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('EditProfile');
+              }}
             >
               <Text style={styles.profileMenuItemText}>Edit Profile</Text>
             </TouchableOpacity>
@@ -645,6 +644,8 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 14, color: '#666', marginBottom: 2 },
   userName: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
+
+  // old avatarButton/avatarText kept in case you still reference them elsewhere
   avatarButton: {
     width: 48,
     height: 48,

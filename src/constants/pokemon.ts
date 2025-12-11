@@ -1,4 +1,3 @@
-// File: src/constants/pokemon.ts
 // Centralized Pokemon-related constants (API URL, limits, type colors, etc.).
 
 // This part is for PokeAPI base values.
