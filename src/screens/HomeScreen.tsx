@@ -1,9 +1,3 @@
-// - Fetches first 151 Pokémon
-// - Search, view modes (All / Caught / Missing)
-// - Detail modal with stats + description
-// - Avatar dropdown (Edit Profile / Log out)
-// - Community button row (navigates to Community screen)
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -63,7 +57,7 @@ type Pokemon = {
 
 const HomeScreen = () => {
   // ===== Navigation and user =====
-  const navigation = useNavigation<any>();       // For navigating to Community / EditProfile
+  const navigation = useNavigation<any>();       // For navigating to Community / EditProfile / HuntMode
   const user = auth().currentUser;               // Logged-in Firebase user
 
   // ===== Main Pokédex state =====
@@ -344,7 +338,7 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* Main feature buttons (Community + future AR buttons) */}
+        {/* Main feature buttons (Community + Hunt Mode) */}
         <View style={styles.featureRow}>
           <TouchableOpacity
             style={styles.featureButton}
@@ -352,6 +346,14 @@ const HomeScreen = () => {
             onPress={() => navigation.navigate('Community')}
           >
             <Text style={styles.featureButtonText}>Community</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.featureButton}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('HuntMode')}
+          >
+            <Text style={styles.featureButtonText}>Hunt Mode</Text>
           </TouchableOpacity>
         </View>
 
