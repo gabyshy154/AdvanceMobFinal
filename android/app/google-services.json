@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "357210078400",
+    "project_id": "pokedex-1c49f",
+    "storage_bucket": "pokedex-1c49f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357210078400:android:74184d7ef9e07d99860125",
+        "android_client_info": {
+          "package_name": "com.pokeexplorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHdlTHEfMg--oJxqQyK6Cvc6Ha-LrK6W4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357210078400:android:d03fe02b0fce8141860125",
+        "android_client_info": {
+          "package_name": "com.pokeexplorernew"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHdlTHEfMg--oJxqQyK6Cvc6Ha-LrK6W4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

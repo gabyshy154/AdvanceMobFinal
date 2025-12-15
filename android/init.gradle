@@ -1,0 +1,11 @@
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.fork = true
+            options.forkOptions.javaHome = file(System.getProperty("java.home"))
+        }
+    }
+}
+
+// Force Gradle to use a different temp directory
+System.setProperty("java.io.tmpdir", new File(System.getProperty("user.home"), "gradle-tmp").absolutePath)

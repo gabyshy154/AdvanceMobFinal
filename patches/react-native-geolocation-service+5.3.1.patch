@@ -1,0 +1,33 @@
+diff --git a/node_modules/react-native-geolocation-service/android/build.gradle b/node_modules/react-native-geolocation-service/android/build.gradle
+index cf167cf..7698e98 100644
+--- a/node_modules/react-native-geolocation-service/android/build.gradle
++++ b/node_modules/react-native-geolocation-service/android/build.gradle
+@@ -14,6 +14,14 @@ android {
+   compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
+   buildToolsVersion safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
+ 
++  // ✅ REQUIRED for AGP 8+
++  namespace "com.agontuk.RNFusedLocation"
++
++  // ✅ REQUIRED: enable BuildConfig generation
++  buildFeatures {
++    buildConfig = true
++  }
++
+   defaultConfig {
+     minSdkVersion safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
+     targetSdkVersion safeExtGet('targetSdkVersion', DEFAULT_TARGET_SDK_VERSION)
+@@ -25,9 +33,11 @@ android {
+ }
+ 
+ dependencies {
+-  def googlePlayServicesVersion = safeExtGet('googlePlayServicesVersion', DEFAULT_GOOGLE_PLAY_SERVICES_VERSION)
++  def googlePlayServicesVersion =
++      safeExtGet('googlePlayServicesVersion', DEFAULT_GOOGLE_PLAY_SERVICES_VERSION)
+   googlePlayServicesVersion = safeExtGet('playServicesVersion', googlePlayServicesVersion)
+-  googlePlayServicesVersion = safeExtGet('playServicesLocationVersion', googlePlayServicesVersion)
++  googlePlayServicesVersion =
++      safeExtGet('playServicesLocationVersion', googlePlayServicesVersion)
+ 
+   implementation "com.facebook.react:react-native:+"
+   implementation 'androidx.appcompat:appcompat:1.0.2'
